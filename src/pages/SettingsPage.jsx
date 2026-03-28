@@ -4,19 +4,23 @@ import { ArrowLeft, Save, TrendingUp, Bell, BellOff } from 'lucide-react';
 import { api } from '../api/supabase.js';
 import { GOAL_LABELS, GOAL_UNITS } from '../constants.js';
 import { useToast } from '../components/Toast.jsx';
+import BadgesGroup from '../components/Badges.jsx';
 
 export default function SettingsPage() {
   const navigate = useNavigate();
   const showToast = useToast();
-  const [goals, setGoals] = useState([]);
+  const [data, setData] = useState({ goals: [], stats: { streak: 0, badges: [] } });
   const [loading, setLoading] = useState(true);
   const [updates, setUpdates] = useState({});
   const [saving, setSaving] = useState(false);
   const [notificationStatus, setNotificationStatus] = useState(Notification.permission);
 
   useEffect(() => {
-    api.getGoals()
-      .then((gs) => { setGoals(gs); setLoading(false); })
+    Promise.all([api.getGoals(), api.getUserStats()])
+      .then(([gs, st]) => { 
+        setData({ goals: gs, stats: st || { streak: 0, badges: [] } }); 
+        setLoading(false); 
+      })
       .catch(() => setLoading(false));
   }, []);
 
@@ -30,7 +34,7 @@ export default function SettingsPage() {
       );
       showToast('✅ 目標を更新しました！');
       const gs = await api.getGoals();
-      setGoals(gs);
+      setData(prev => ({ ...prev, goals: gs }));
       setUpdates({});
     } catch (e) {
       showToast('⚠️ ' + e.message, 'error');
@@ -65,8 +69,11 @@ export default function SettingsPage() {
         <button className="btn btn-ghost" onClick={() => navigate('/')} style={{ padding: 8 }}>
           <ArrowLeft size={22} />
         </button>
-        <h1 className="page-title">設定・目標管理</h1>
+        <h1 className="page-title">Profile & Settings</h1>
       </div>
+
+      {/* 獲得バッジ（アチーブメント） */}
+      <BadgesGroup earnedBadgeIds={data.stats.badges.map(b => b.id)} />
 
       {/* 通知設定 */}
       <div className="card">
@@ -103,7 +110,7 @@ export default function SettingsPage() {
           トレーニングや体重計測後に最新の数値を入力してください。
         </p>
 
-        {goals.map((g) => (
+        {data.goals.map((g) => (
           <div key={g.goal_id} style={{ marginBottom: 20 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 8 }}>
               <label className="input-label" style={{ marginBottom: 0 }}>
@@ -139,7 +146,7 @@ export default function SettingsPage() {
       {/* 現在の目標一覧 */}
       <div className="card">
         <div className="card-title">目標一覧 🎯</div>
-        {goals.map((g) => {
+        {data.goals.map((g) => {
           const pct = g.target_value > 0 ? Math.round((g.current_value / g.target_value) * 100) : 0;
           return (
             <div key={g.goal_id} style={{ padding: '12px 0', borderBottom: '1px solid var(--border)' }}>

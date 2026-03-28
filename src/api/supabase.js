@@ -200,6 +200,74 @@ export const api = {
       console.error('Error in getBodyParts7days:', e);
       return {};
     }
+  },
+
+  getUserStats: async () => {
+    try {
+      const db = await dbPromise;
+      const cached = await db.get('cache', 'user_stats');
+      if (!navigator.onLine) return cached || { streak: 0, badges: [] };
+
+      // 過去の記録日を全取得（長期利用時はLIMITや集計テーブルへの移行が必要）
+      const [meals, workouts] = await Promise.all([
+        supabase.from('meals').select('timestamp'),
+        supabase.from('workout_logs').select('timestamp, exercise, weight_kg') 
+      ]);
+      
+      if (meals.error) throw meals.error;
+      if (workouts.error) throw workouts.error;
+
+      // ユニークなアクティブ日を抽出
+      const activeDays = new Set([
+        ...(meals.data || []).map(d => d.timestamp.substring(0, 10)),
+        ...(workouts.data || []).map(d => d.timestamp.substring(0, 10))
+      ]);
+      const sortedDays = Array.from(activeDays).sort((a, b) => b.localeCompare(a)); // 降順
+
+      // --- ストリーク計算 (日本時間 sv-SE基準) ---
+      let streak = 0;
+      const today = new Date();
+      const todayStr = today.toLocaleDateString('sv-SE');
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toLocaleDateString('sv-SE');
+
+      // 今日か昨日記録があればストリーク継続と判定
+      if (sortedDays.includes(todayStr) || sortedDays.includes(yesterdayStr)) {
+         let ptr = new Date(sortedDays.includes(todayStr) ? todayStr : yesterdayStr);
+         
+         while (true) {
+           const dStr = ptr.toLocaleDateString('sv-SE');
+           if (sortedDays.includes(dStr)) {
+             streak++;
+             ptr.setDate(ptr.getDate() - 1); // 1日さかのぼる
+           } else {
+             break;
+           }
+         }
+      }
+
+      // --- バッジ獲得判定 ---
+      const badges = [];
+      if (sortedDays.length > 0) badges.push({ id: 'first_blood', name: '初めの一歩', desc: '初めての記録完了', icon: '👶' });
+      if (streak >= 3) badges.push({ id: 'streak_3', name: '三日坊主卒業', desc: '3日連続で記録', icon: '🔥' });
+      if (streak >= 7) badges.push({ id: 'streak_7', name: 'ルーティンマスター', desc: '7日連続で記録', icon: '📅' });
+      if (streak >= 30) badges.push({ id: 'streak_30', name: '鉄の意志', desc: '30日連続で記録', icon: '💎' });
+      
+      const has100Bench = workouts.data?.some(w => w.exercise && w.exercise.includes('ベンチプレス') && w.weight_kg >= 100);
+      if (has100Bench) badges.push({ id: 'bench_100', name: '100kgクラブ', desc: 'ベンチプレス100kg達成', icon: '🦍' });
+
+      const has140Squat = workouts.data?.some(w => w.exercise && w.exercise.includes('スクワット') && w.weight_kg >= 140);
+      if (has140Squat) badges.push({ id: 'squat_140', name: '大黒柱', desc: 'スクワット140kg達成', icon: '🏛️' });
+
+      const stats = { streak, badges };
+      await db.put('cache', stats, 'user_stats');
+      return stats;
+
+    } catch (e) {
+      console.error('Error in getUserStats:', e);
+      return { streak: 0, badges: [] };
+    }
   }
 };
 

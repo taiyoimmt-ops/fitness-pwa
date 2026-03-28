@@ -32,12 +32,12 @@ export default function Dashboard() {
   const showToast = useToast();
   const [loading, setLoading] = useState(true);
   const [online, setOnline] = useState(navigator.onLine);
-  const [data, setData] = useState({ meals: [], goals: [] });
+  const [data, setData] = useState({ meals: [], goals: [], stats: { streak: 0, badges: [] } });
 
   const load = useCallback(async () => {
     try {
-      const [m, g] = await Promise.all([api.getMealsToday(), api.getGoals()]);
-      setData({ meals: m || [], goals: g || [] });
+      const [m, g, s] = await Promise.all([api.getMealsToday(), api.getGoals(), api.getUserStats()]);
+      setData({ meals: m || [], goals: g || [], stats: s || { streak: 0, badges: [] } });
     } catch (e) { showToast('データ読み込み失敗', 'error'); }
     finally { setLoading(false); }
   }, [showToast]);
@@ -67,7 +67,14 @@ export default function Dashboard() {
 
       <div className="page-header" style={{ justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ background: 'var(--accent)', color: '#000', padding: '6px 12px', borderRadius: 12, fontWeight: 900, fontSize: 13 }}>IRON</div>
+          <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-3)', padding: '6px 12px', borderRadius: 16 }}>
+            <span style={{ color: 'var(--accent)', fontWeight: 900, fontSize: 13, marginRight: data.stats.streak > 0 ? 8 : 0 }}>IRON</span>
+            {data.stats.streak > 0 && (
+              <span className="streak-badge pulse" style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(255, 69, 0, 0.1)', color: '#FF4500', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 'bold' }}>
+                🔥 {data.stats.streak} Days
+              </span>
+            )}
+          </div>
           <h1 className="page-title">Dash</h1>
         </div>
         <button className="btn btn-ghost" onClick={() => { haptics.light(); navigate('/calendar'); }}>
@@ -106,7 +113,7 @@ export default function Dashboard() {
         </div>
 
         {/* 継続とバッジ */}
-        <BadgesGroup streak={7} />
+        <BadgesGroup earnedBadgeIds={data.stats.badges.map(b => b.id)} />
 
         {/* クイックツールバー */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
