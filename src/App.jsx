@@ -1,5 +1,5 @@
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Utensils, Dumbbell, BarChart2, Settings, TrendingUp } from 'lucide-react';
+import { Home, Utensils, Dumbbell, BarChart2, Settings, TrendingUp, Calendar } from 'lucide-react';
 import Dashboard from './pages/Dashboard.jsx';
 import MealPage from './pages/MealPage.jsx';
 import WorkoutPage from './pages/WorkoutPage.jsx';
@@ -7,13 +7,14 @@ import AnalysisPage from './pages/AnalysisPage.jsx';
 import StatsPage from './pages/StatsPage.jsx';
 import ImportPage from './pages/ImportPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
+import CalendarPage from './pages/CalendarPage.jsx';
 import { ToastProvider } from './components/Toast.jsx';
 
 const NAV_ITEMS = [
-  { path: '/',         label: 'ホーム', icon: Home },
+  { path: '/',         label: 'Dash', icon: Home },
+  { path: '/calendar', label: '履歴',   icon: Calendar },
   { path: '/meal',     label: '食事',   icon: Utensils },
   { path: '/workout',  label: 'トレ',   icon: Dumbbell },
-  { path: '/stats',    label: 'Stats',  icon: TrendingUp },
   { path: '/analysis', label: 'AI',     icon: BarChart2 },
   { path: '/settings', label: '設定',   icon: Settings },
 ];
@@ -47,6 +48,7 @@ export default function App() {
     <ToastProvider>
       <Routes>
         <Route path="/"         element={<Dashboard />} />
+        <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/meal"     element={<MealPage />} />
         <Route path="/workout"  element={<WorkoutPage />} />
         <Route path="/analysis" element={<AnalysisPage />} />
