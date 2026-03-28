@@ -499,3 +499,122 @@ input, textarea {
 .mt-16 { margin-top: 16px; }
 .mb-8  { margin-bottom: 8px; }
 .mb-16 { margin-bottom: 16px; }
+
+/* ═══════════════════════════════════════════
+   Week1 追加: Skeleton / Micro-interactions
+   ═══════════════════════════════════════════ */
+
+/* ── Skeleton Screen ── */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-3) 0%,
+    rgba(255,255,255,0.06) 40%,
+    var(--bg-3) 80%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  display: block;
+}
+
+/* ── Ripple（ボタンのタップ波紋） ── */
+.btn {
+  position: relative;
+  overflow: hidden;
+}
+
+@keyframes ripple {
+  0%   { transform: scale(0); opacity: 0.5; }
+  100% { transform: scale(4); opacity: 0; }
+}
+
+.ripple-dot {
+  position: absolute;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  background: rgba(255,255,255,0.25);
+  transform: scale(0);
+  animation: ripple 0.5s linear;
+  pointer-events: none;
+  margin-top: -30px;
+  margin-left: -30px;
+}
+
+/* ── ボタンのSpringアニメーション ── */
+.btn-primary:active {
+  transform: scale(0.96);
+  transition: transform 0.1s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.btn-secondary:active {
+  transform: scale(0.97);
+  transition: transform 0.1s ease;
+}
+
+/* ── ページ遷移（スライドイン） ── */
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.page-slide-in {
+  animation: slideInRight 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+/* ── オフラインバナー ── */
+.offline-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: var(--yellow);
+  color: #000;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  padding: 6px;
+  z-index: 300;
+  transition: transform 0.3s ease;
+}
+
+.offline-banner.hidden {
+  transform: translateY(-100%);
+}
+
+/* ── Optimistic Pending インジケーター ── */
+.pending-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--yellow);
+  display: inline-block;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ── 達成アニメーション (目標100%時) ── */
+@keyframes celebrateRing {
+  0%   { stroke: var(--accent); filter: drop-shadow(0 0 4px var(--accent)); }
+  50%  { stroke: #fff;          filter: drop-shadow(0 0 16px var(--accent)); }
+  100% { stroke: var(--accent); filter: drop-shadow(0 0 4px var(--accent)); }
+}
+
+.ring-celebrate circle.track-fill {
+  animation: celebrateRing 1s ease-in-out 3;
+}
+
+/* ── nav-item のタップ時バウンス ── */
+.nav-item:active {
+  transform: scale(0.88);
+  transition: transform 0.1s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
