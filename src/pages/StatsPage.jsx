@@ -1,17 +1,17 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, TrendingUp, Weight } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import {
   Chart as ChartJS,
   CategoryScale, LinearScale, PointElement, LineElement,
-  BarElement, Title, Tooltip, Legend, Filler
+  BarElement, Title, Tooltip, Legend, Filler, ArcElement
 } from 'chart.js';
-import { Line, Bar } from 'react-chartjs-2';
-import { api } from '../api/gas.js';
+import { Line, Bar, Doughnut } from 'react-chartjs-2';
+import { api } from '../api/supabase.js';
 
 ChartJS.register(
   CategoryScale, LinearScale, PointElement, LineElement,
-  BarElement, Title, Tooltip, Legend, Filler
+  BarElement, Title, Tooltip, Legend, Filler, ArcElement
 );
 
 // Epley 1RM推定式
@@ -21,7 +21,7 @@ function calc1RM(weight, reps) {
 }
 
 // ─── チャートの共通オプション ───
-function lineOptions(label, unit = 'kg') {
+function lineOptions(unit = 'kg') {
   return {
     responsive: true,
     maintainAspectRatio: false,
@@ -41,13 +41,13 @@ function lineOptions(label, unit = 'kg') {
     scales: {
       x: {
         grid: { color: 'rgba(255,255,255,0.04)' },
-        ticks: { color: '#555', font: { size: 10 }, maxTicksLimit: 6 },
+        ticks: { color: '#888', font: { size: 10 }, maxTicksLimit: 6 },
         border: { color: 'transparent' },
       },
       y: {
         grid: { color: 'rgba(255,255,255,0.04)' },
-        ticks: { color: '#555', font: { size: 10 }, callback: (v) => `${v}${unit}` },
-        border: { color: 'transparent' },
+        ticks: { color: '#888', font: { size: 10 }, callback: (v) => `${v}${unit}` },
+        border: { display: false },
       },
     },
   };
@@ -57,8 +57,8 @@ function lineOptions(label, unit = 'kg') {
 function OneRMChart({ exercise, records }) {
   if (!records || records.length === 0) return null;
 
-  const sorted = [...records].sort((a, b) => a.date.localeCompare(b.date));
-  const labels = sorted.map(r => r.date.slice(5)); // MM-DD
+  const sorted = [...records].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+  const labels = sorted.map(r => r.timestamp.slice(5, 10)); // MM-DD
   const data = sorted.map(r => calc1RM(r.weight_kg, r.reps));
   const maxRM = Math.max(...data);
   const latest = data[data.length - 1];
@@ -99,7 +99,7 @@ function OneRMChart({ exercise, records }) {
         </div>
       </div>
       <div style={{ height: 140 }}>
-        <Line data={chartData} options={lineOptions(exercise)} />
+        <Line data={chartData} options={lineOptions('kg')} />
       </div>
     </div>
   );
@@ -110,12 +110,12 @@ function WeightChart({ records }) {
   if (!records || records.length === 0) return (
     <div className="card">
       <div className="card-title">体重推移 ⚖️</div>
-      <div className="empty-state"><p>体重データがありません<br />ダッシュボードから記録してください</p></div>
+      <div className="empty-state">体重データがありません</div>
     </div>
   );
 
-  const sorted = [...records].sort((a, b) => a.date.localeCompare(b.date));
-  const labels = sorted.map(r => r.date.slice(5));
+  const sorted = [...records].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+  const labels = sorted.map(r => r.timestamp.slice(5, 10));
   const data = sorted.map(r => r.weight_kg);
   const latest = data[data.length - 1];
   const trend = data.length > 1 ? (latest - data[0]).toFixed(1) : 0;
@@ -124,11 +124,11 @@ function WeightChart({ records }) {
     labels,
     datasets: [{
       data,
-      borderColor: '#39FF14',
-      backgroundColor: 'rgba(57,255,20,0.06)',
+      borderColor: '#00f2fe',
+      backgroundColor: 'rgba(0,242,254,0.06)',
       borderWidth: 2.5,
       pointRadius: 3,
-      pointBackgroundColor: '#39FF14',
+      pointBackgroundColor: '#00f2fe',
       fill: true,
       tension: 0.4,
     }],
@@ -140,61 +140,116 @@ function WeightChart({ records }) {
         <div>
           <div className="card-title" style={{ marginBottom: 4 }}>体重推移 ⚖️</div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ fontSize: 28, fontWeight: 800, color: 'var(--accent)' }}>{latest}kg</span>
-            <span style={{ fontSize: 12, color: Number(trend) >= 0 ? 'var(--accent)' : 'var(--red)', fontWeight: 700 }}>
+            <span style={{ fontSize: 28, fontWeight: 800, color: '#00f2fe' }}>{latest}kg</span>
+            <span style={{ fontSize: 12, color: Number(trend) >= 0 ? '#00f2fe' : 'var(--red)', fontWeight: 700 }}>
               {Number(trend) >= 0 ? '▲' : '▼'}{Math.abs(trend)}kg
             </span>
           </div>
           <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-            {records.length}日間のデータ
+            過去30日間の推移
           </div>
         </div>
       </div>
       <div style={{ height: 140 }}>
-        <Line data={chartData} options={lineOptions('体重')} />
+        <Line data={chartData} options={lineOptions('kg')} />
       </div>
     </div>
   );
 }
 
-// ─── 部位別ボリュームカード ───
-function VolumeChart({ volumeData }) {
-  if (!volumeData) return null;
-  const BODY_PARTS = ['胸', '背中', '脚', '肩', '腕', '体幹'];
-  const values = BODY_PARTS.map(p => volumeData[p] || 0);
+// ─── 部位別比率カード（Doughnut） ───
+function BodyPartDoughnut({ volumeData }) {
+  if (!volumeData || Object.keys(volumeData).length === 0) {
+    return (
+      <div className="card">
+        <div className="card-title">部位別トレーニング比率</div>
+        <div className="empty-state">直近7日間のデータがありません</div>
+      </div>
+    );
+  }
+
+  const parts = Object.keys(volumeData);
+  const data = parts.map(p => volumeData[p]);
+  
+  const chartData = {
+    labels: parts,
+    datasets: [{
+      data,
+      backgroundColor: ['#39FF14', '#00f2fe', '#fdf300', '#ff007c', '#9d00ff', '#ff6a00'],
+      borderWidth: 0,
+      hoverOffset: 4
+    }]
+  };
+  
+  return (
+    <div className="card">
+      <div className="card-title">直近7日 部位別比率 (セット数)</div>
+      <div style={{ height: 180, position: 'relative', marginTop: 12 }}>
+        <Doughnut data={chartData} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#888', font: {size: 11} } } } }} />
+      </div>
+    </div>
+  );
+}
+
+// ─── PFCバランスカード（Stacked Bar） ───
+function PfcBarChart({ meals }) {
+  if (!meals || meals.length === 0) {
+    return (
+      <div className="card">
+        <div className="card-title">直近7日 PFC摂取推移</div>
+        <div className="empty-state">食事データがありません</div>
+      </div>
+    );
+  }
+
+  // meals を日付ごとに集計
+  const daily = {};
+  for (const m of meals) {
+    if (!m.timestamp) continue;
+    const d = m.timestamp.split('T')[0].slice(5); // MM-DD
+    if (!daily[d]) daily[d] = { p: 0, f: 0, c: 0 };
+    daily[d].p += parseFloat(m.protein_g) || 0;
+    daily[d].f += parseFloat(m.fat_g) || 0;
+    daily[d].c += parseFloat(m.carb_g) || 0;
+  }
+  
+  const labels = Object.keys(daily).sort();
+  const dataP = labels.map(l => Math.round(daily[l].p));
+  const dataF = labels.map(l => Math.round(daily[l].f));
+  const dataC = labels.map(l => Math.round(daily[l].c));
 
   const chartData = {
-    labels: BODY_PARTS,
-    datasets: [{
-      data: values,
-      backgroundColor: values.map(v => v < 3 ? 'rgba(255,68,68,0.7)' : 'rgba(57,255,20,0.7)'),
-      borderColor: values.map(v => v < 3 ? '#FF4444' : '#39FF14'),
-      borderWidth: 1.5,
-      borderRadius: 6,
-    }],
+    labels,
+    datasets: [
+      { label: 'タンパク質 (g)', data: dataP, backgroundColor: '#39FF14', stack: 'Stack 0', borderRadius: 2 },
+      { label: '脂質 (g)', data: dataF, backgroundColor: '#ff4444', stack: 'Stack 0', borderRadius: 2 },
+      { label: '炭水化物 (g)', data: dataC, backgroundColor: '#00f2fe', stack: 'Stack 0', borderRadius: 2 }
+    ]
   };
 
-  const barOptions = {
-    ...lineOptions('', 'セット'),
-    scales: {
-      ...lineOptions('', 'セット').scales,
-      y: {
-        ...lineOptions('', 'セット').scales.y,
-        beginAtZero: true,
-        ticks: { color: '#555', font: { size: 10 }, stepSize: 1, callback: (v) => `${v}` },
-      },
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { 
+      legend: { display: false },
+      tooltip: { backgroundColor: '#1a1a1a', titleColor: '#888', bodyColor: '#fff', borderWidth: 1, borderColor: '#333' }
     },
+    scales: {
+      x: { stacked: true, grid: { display: false }, ticks: {color: '#888', font:{size:10}} },
+      y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: {color: '#888', font:{size:10}}, border: {display: false} }
+    }
   };
 
   return (
     <div className="card">
-      <div className="card-title">直近7日 部位別ボリューム 🔥</div>
-      <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
-        <span style={{ fontSize: 11, color: 'var(--accent)' }}>■ 4セット以上</span>
-        <span style={{ fontSize: 11, color: 'var(--red)' }}>■ 3セット以下（要刺激）</span>
+      <div className="card-title">直近7日 PFC摂取推移</div>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 12, marginTop: 8 }}>
+        <span style={{ fontSize: 11, color: '#39FF14' }}>■ ﾀﾝﾊﾟｸ質</span>
+        <span style={{ fontSize: 11, color: '#ff4444' }}>■ 脂質</span>
+        <span style={{ fontSize: 11, color: '#00f2fe' }}>■ 炭水化物</span>
       </div>
       <div style={{ height: 160 }}>
-        <Bar data={chartData} options={barOptions} />
+        <Bar data={chartData} options={options} />
       </div>
     </div>
   );
@@ -206,7 +261,8 @@ export default function StatsPage() {
   const [loading, setLoading] = useState(true);
   const [weightHistory, setWeightHistory] = useState([]);
   const [workoutHistory, setWorkoutHistory] = useState({});
-  const [volumeData, setVolumeData] = useState(null);
+  const [volumeData, setVolumeData] = useState({});
+  const [mealsData, setMealsData] = useState([]);
   const [error, setError] = useState('');
 
   const BIG3 = ['ベンチプレス', 'スクワット', 'デッドリフト'];
@@ -215,29 +271,25 @@ export default function StatsPage() {
     const load = async () => {
       try {
         const [wh, bph, summary] = await Promise.all([
-          api.getBodyWeightHistory(30).catch(() => []),
+          api.getWeightHistory(30).catch(() => []),
           api.getBodyParts7days().catch(() => ({})),
-          api.getSummary7days().catch(() => null),
+          api.getSummary7days().catch(() => ({ meals: [] })),
         ]);
-        setWeightHistory(wh);
-        // 部位別ボリューム集計
-        const vol = {};
-        Object.values(bph).forEach(dayData => {
-          Object.entries(dayData).forEach(([part, sets]) => {
-            vol[part] = (vol[part] || 0) + sets;
-          });
-        });
-        setVolumeData(vol);
+        
+        setWeightHistory(wh || []);
+        setVolumeData(bph || {});
+        setMealsData(summary?.meals || []);
 
         // BIG3のワークアウト履歴を取得
         const histories = await Promise.all(
           BIG3.map(ex => api.getWorkoutHistory(ex, 20).catch(() => []))
         );
         const h = {};
-        BIG3.forEach((ex, i) => { h[ex] = histories[i]; });
+        BIG3.forEach((ex, i) => { h[ex] = histories[i] || []; });
         setWorkoutHistory(h);
       } catch (e) {
-        setError(e.message);
+        console.error('Stats load error:', e);
+        setError('データの取得に失敗しました。');
       } finally {
         setLoading(false);
       }
@@ -254,26 +306,30 @@ export default function StatsPage() {
   }
 
   return (
-    <div className="page fade-in">
+    <div className="page fade-in" style={{ paddingBottom: '90px' }}>
       <div className="page-header">
         <button className="btn btn-ghost" onClick={() => navigate('/')} style={{ padding: 8 }}>
           <ArrowLeft size={22} />
         </button>
-        <h1 className="page-title">Stats</h1>
+        <h1 className="page-title">Stats & Analytics</h1>
       </div>
 
       {error && <div className="error-state">{error}</div>}
 
-      {/* 体重推移 */}
+      {/* PFCバランス推移 (Bar) */}
+      <PfcBarChart meals={mealsData} />
+
+      {/* 部位別トレーニング比率 (Doughnut) */}
+      <BodyPartDoughnut volumeData={volumeData} />
+
+      {/* 体重推移 (Line) */}
       <WeightChart records={weightHistory} />
 
-      {/* BIG3 推定1RM推移 */}
+      {/* BIG3 推定1RM推移 (Line) */}
+      <div style={{ marginTop: '24px', marginBottom: '12px', fontSize: '18px', fontWeight: 'bold' }}>推定1RMトレンド</div>
       {BIG3.map(ex => (
         <OneRMChart key={ex} exercise={ex} records={workoutHistory[ex] || []} />
       ))}
-
-      {/* 部位別ボリューム */}
-      <VolumeChart volumeData={volumeData} />
     </div>
   );
 }

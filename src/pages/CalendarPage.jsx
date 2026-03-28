@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Dumbbell, Pizza, Weight } from 'lucide-react';
-import { api } from '../api/gas.js';
+import { api } from '../api/supabase.js';
 import { haptics } from '../utils/haptics.js';
 import { useNavigate } from 'react-router-dom';
 

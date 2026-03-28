@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, CheckCircle, Timer, Play, RotateCcw } from 'lucide-react';
-import { api } from '../api/gas.js';
+import { api } from '../api/supabase.js';
 import { EXERCISES, BODY_PARTS } from '../constants.js';
 import { useToast } from '../components/Toast.jsx';
 import { haptics } from '../utils/haptics.js';

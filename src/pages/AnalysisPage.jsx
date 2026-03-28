@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Zap, Send, Dumbbell, RotateCcw, Camera, Scan, User } from 'lucide-react';
-import { api } from '../api/gas.js';
+import { api } from '../api/supabase.js';
 import { haptics } from '../utils/haptics.js';
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;

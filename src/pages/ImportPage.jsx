@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Upload, CheckCircle, AlertCircle, Eye } from 'lucide-react';
-import { api } from '../api/gas.js';
+import { api } from '../api/supabase.js';
 import { useToast } from '../components/Toast.jsx';
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;

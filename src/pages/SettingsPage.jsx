@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, TrendingUp, Bell, BellOff } from 'lucide-react';
-import { api } from '../api/gas.js';
+import { api } from '../api/supabase.js';
 import { GOAL_LABELS, GOAL_UNITS } from '../constants.js';
 import { useToast } from '../components/Toast.jsx';
 

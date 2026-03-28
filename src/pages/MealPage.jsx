@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Camera, CheckCircle, Edit3, ArrowLeft, AlertCircle, Scan, Clock, Keyboard } from 'lucide-react';
-import { api } from '../api/gas.js';
+import { api } from '../api/supabase.js';
 import { useToast } from '../components/Toast.jsx';
 import { haptics } from '../utils/haptics.js';
 import HapticInput from '../components/HapticInput.jsx';

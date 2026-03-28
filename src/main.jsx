@@ -1,14 +1,22 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App.jsx';
 import './index.css';
-import { flushPendingQueue } from './api/gas.js';
+import { flushPendingQueue } from './api/supabase.js';
+import { ErrorBoundary } from './components/ErrorBoundary.jsx';
 
 // Service Worker 登録
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+      console.log('SW Registered:', reg.scope);
+      if (reg.sync) {
+        navigator.serviceWorker.ready.then(swRegistration => {
+          return swRegistration.sync.register('sync-meals');
+        }).catch(err => console.log('Sync registration failed:', err));
+      }
+    });
   });
 }
 
@@ -17,10 +25,12 @@ window.addEventListener('online', () => {
   flushPendingQueue().catch(() => {});
 });
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
     <BrowserRouter>
-      <App />
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
     </BrowserRouter>
-  </React.StrictMode>
+  </StrictMode>
 );

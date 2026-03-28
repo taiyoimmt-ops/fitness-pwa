@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Utensils, Dumbbell, BarChart2, Scale, Wifi, WifiOff, Share2, Flame, Calendar, Plus } from 'lucide-react';
-import { api, flushPendingQueue } from '../api/gas.js';
+import { api, flushPendingQueue } from '../api/supabase.js';
 import { DAILY_TARGETS, GOAL_LABELS, GOAL_UNITS } from '../constants.js';
 import RingGauge from '../components/RingGauge.jsx';
 import { useToast } from '../components/Toast.jsx';
