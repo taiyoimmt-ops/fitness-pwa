@@ -12,7 +12,9 @@ export default function HapticInput({ value, onChange, step = 1, unit = '', labe
 
   const update = (delta) => {
     haptics.selection();
-    onChange(Number((Number(value) + delta).toFixed(1)));
+    const current = Number(value) || 0;
+    const next = (current + delta).toFixed(1);
+    onChange(Number(next));
   };
 
   const startAutoUpdate = (delta) => {

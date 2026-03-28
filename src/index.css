@@ -24,7 +24,9 @@
   --radius: 16px;
   --radius-sm: 10px;
   --shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
-  --nav-height: 72px;
+  --nav-height: calc(72px + env(safe-area-inset-bottom));
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
 }
 
 /* ── ライトモード設定 (システム設定がLightの時のみ) ── */
@@ -84,7 +86,10 @@ body {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 20px 16px calc(var(--nav-height) + 20px);
+  padding: 
+    calc(20px + var(--safe-top)) 
+    16px 
+    calc(var(--nav-height) + 20px);
   -webkit-overflow-scrolling: touch;
 }
 

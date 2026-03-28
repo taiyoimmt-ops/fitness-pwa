@@ -53,12 +53,12 @@ export default function Dashboard() {
 
   if (loading) return <DashboardSkeleton />;
 
-  // 今日の合計PFC
-  const totals = data.meals.reduce((acc, m) => ({
-    cal: acc.cal + m.calories,
-    pro: acc.pro + m.protein_g,
-    fat: acc.fat + m.fat_g,
-    carb: acc.carb + m.carb_g
+  const meals = data?.meals || [];
+  const totals = meals.reduce((acc, m) => ({
+    cal: acc.cal + (Number(m.calories) || 0),
+    pro: acc.pro + (Number(m.protein_g) || 0),
+    fat: acc.fat + (Number(m.fat_g) || 0),
+    carb: acc.carb + (Number(m.carb_g) || 0)
   }), { cal: 0, pro: 0, fat: 0, carb: 0 });
 
   return (

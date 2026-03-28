@@ -59,7 +59,7 @@ export const api = {
   },
 
   getMealsToday: () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString('sv-SE');
     return fetchWithCache('meals_today', async () => {
       const { data, error } = await supabase.from('meals').select('*').gte('timestamp', today).order('timestamp', { ascending: false });
       if (error) throw error;
