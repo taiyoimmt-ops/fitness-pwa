@@ -2,18 +2,43 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#0a0a0a" />
+    
+    <!-- iOS Native Experience PWA Meta -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="TrainLog" />
+    <meta name="apple-mobile-web-app-title" content="IRON" />
+    
+    <!-- Splash Screen for iPhone (13, 14, 15 Pro) -->
+    <link rel="apple-touch-startup-image" href="/splash.png" />
+    
     <meta name="description" content="個人用筋トレ・食事管理PWA" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="apple-touch-icon" href="/icon-192.png" />
-    <title>筋トレログ</title>
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    
+    <style>
+      body {
+        background-color: #0a0a0a;
+        margin: 0;
+        overflow: hidden;
+      }
+      #root {
+        height: 100vh;
+        width: 100vw;
+      }
+      html, body {
+        position: fixed;
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+    
+    <title>IRON</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <noscript>JavaScriptを有効にしてください</noscript>
   </body>
 </html>
