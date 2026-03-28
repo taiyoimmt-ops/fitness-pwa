@@ -41,56 +41,47 @@ async function queueRequest(req) {
 }
 
 export const api = {
-  // 特定の日付（YYYY-MM-DD）の全ログを取得
   getDailyLogs: async (dateStr) => {
     const start = `${dateStr}T00:00:00Z`;
     const end = `${dateStr}T23:59:59Z`;
-
     const [meals, workouts, weights] = await Promise.all([
       supabase.from('meals').select('*').gte('timestamp', start).lte('timestamp', end).order('timestamp', { ascending: true }),
       supabase.from('workout_logs').select('*').gte('timestamp', start).lte('timestamp', end).order('timestamp', { ascending: true }),
       supabase.from('body_weight').select('*').gte('timestamp', start).lte('timestamp', end).order('timestamp', { ascending: true }),
     ]);
-
-    return {
-      meals: meals.data || [],
-      workouts: workouts.data || [],
-      weight: weights.data?.[0] || null
-    };
+    return { meals: meals.data || [], workouts: workouts.data || [], weight: weights.data?.[0] || null };
   },
 
-  // カレンダー用の「記録がある日」のリストを取得
-  getActiveDays: async (yearMonth) => {
-    // 簡易的に直近100件からユニークな日付を抽出（本来はSQLで集約すべきだが簡単のため）
+  getActiveDays: async () => {
     const { data } = await supabase.from('meals').select('timestamp').limit(200);
     const days = new Set((data || []).map(d => d.timestamp.split('T')[0]));
     return Array.from(days);
   },
 
-  // 食事（手入力 or AI解析済み or 後で分析）
+  getMealsToday: () => {
+    const today = new Date().toISOString().split('T')[0];
+    return fetchWithCache('meals_today', async () => {
+      const { data, error } = await supabase.from('meals').select('*').gte('timestamp', today).order('timestamp', { ascending: false });
+      if (error) throw error;
+      return data;
+    });
+  },
+
   addMeal: (m) => syncPost('meals', { ...m, is_analyzed: m.is_analyzed !== undefined ? m.is_analyzed : true }),
   
-  // 未解析画像のアップロード（Supabase Storage を使いたいが、簡単のためBase64をTEXTに保存するか後で検討）
-  // ここでは一旦TEXTカラムにBase64を入れる（小規模なら可）
   savePendingMealImage: (base64) => syncPost('meals', {
-    meal_label: "後ほど解析",
-    calories: 0, protein_g: 0, fat_g: 0, carb_g: 0,
-    image_url: base64,
-    is_analyzed: false
+    meal_label: "後ほど解析", calories: 0, protein_g: 0, fat_g: 0, carb_g: 0,
+    image_url: base64, is_analyzed: false
   }),
 
-  // 未分析の食事を取得
-  getPendingMeals: () => supabase.from('meals').select('*').eq('is_analyzed', false),
-
-  // ワークアウト
   addWorkoutLog: (l) => syncPost('workout_logs', l),
-  getWorkoutHistory: (exercise, limit = 20) => fetchWithCache(`workout_${exercise}`, async () => {
-    const { data, error } = await supabase.from('workout_logs').select('*').eq('exercise', exercise).order('timestamp', { ascending: false }).limit(limit);
-    if (error) throw error;
-    return data;
-  }),
+  addWorkout: (sets) => Promise.all(sets.map(s => syncPost('workout_logs', s))),
+  
+  getLastWorkout: async (exercise) => {
+    const { data } = await supabase.from('workout_logs').select('*').eq('exercise', exercise).order('timestamp', { ascending: false }).limit(1);
+    return data?.[0] ? { ...data[0], exists: true } : { exists: false };
+  },
 
-  // 体重
   addBodyWeight: (w, memo) => syncPost('body_weight', { weight_kg: w, memo }),
   getWeightHistory: (days = 30) => {
     const cutOff = new Date();
@@ -111,5 +102,24 @@ export const api = {
 
   getSummary7days: async () => {
     return { workout_days_7days: 5 };
+  },
+  
+  getBodyParts7days: async () => {
+     return {}; // ヒートマップ用
   }
 };
+
+// 保留キューの同期
+export async function flushPendingQueue() {
+  if (!navigator.onLine) return;
+  const db = await dbPromise;
+  const store = db.transaction('pending_requests', 'readwrite').objectStore('pending_requests');
+  const allReqs = await store.getAll();
+  for (const req of allReqs) {
+    try {
+      const { table, data, method } = req;
+      const { error } = await supabase.from(table)[method](data);
+      if (!error) await store.delete(req.id);
+    } catch (e) { console.error('Sync failed', e); }
+  }
+}
