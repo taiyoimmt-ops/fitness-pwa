@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Utensils, Dumbbell, BarChart2, Scale, Wifi, WifiOff } from 'lucide-react';
+import { Utensils, Dumbbell, BarChart2, Scale, Wifi, WifiOff, Share2, Flame } from 'lucide-react';
 import { api, flushPendingQueue } from '../api/gas.js';
 import { DAILY_TARGETS, GOAL_LABELS, GOAL_UNITS } from '../constants.js';
 import RingGauge from '../components/RingGauge.jsx';
 import { useToast } from '../components/Toast.jsx';
 import { DashboardSkeleton } from '../components/Skeleton.jsx';
+import BadgesGroup from '../components/Badges.jsx';
 
 /* ── Ripple ── */
 function useRipple() {
@@ -41,12 +42,10 @@ function PFCBar({ label, current, target, unit }) {
   );
 }
 
-/* ── ハプティクスフィードバック ── */
 function haptic(pattern = 'light') {
   if (!navigator.vibrate) return;
   if (pattern === 'light') navigator.vibrate(10);
   if (pattern === 'success') navigator.vibrate([10, 30, 10]);
-  if (pattern === 'error') navigator.vibrate([30, 10, 30]);
 }
 
 export default function Dashboard() {
@@ -62,13 +61,13 @@ export default function Dashboard() {
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [hasCachedData, setHasCachedData] = useState(false);
+  const [streak, setStreak] = useState(0);
+  const [earnedBadges, setEarnedBadges] = useState([]);
 
-  // ネットワーク状態の監視
   useEffect(() => {
     const onOnline = async () => {
       setIsOnline(true);
-      await flushPendingQueue(); // バックグラウンドで同期
+      await flushPendingQueue();
     };
     const onOffline = () => setIsOnline(false);
     window.addEventListener('online', onOnline);
@@ -81,14 +80,23 @@ export default function Dashboard() {
 
   const load = useCallback(async () => {
     try {
-      // キャッシュ優先: データをすぐに表示してからローディング解除
-      const [meals, gs] = await Promise.all([
+      const [meals, gs, summary] = await Promise.all([
         api.getMealsToday(),
         api.getGoals(),
+        api.getSummary7days().catch(() => ({})),
       ]);
       setMealsToday(meals);
       setGoals(gs);
-      setHasCachedData(gs.length > 0);
+      
+      // 仮のロジック: サマリーからバッジとストリークを判定
+      // 本来はバックエンドで計算するが、今回はフロントでシミュレート
+      setStreak(summary.workout_days_7days || 0);
+      const badges = [];
+      if (summary.workout_days_7days >= 3) badges.push('streak_3');
+      if (summary.workout_days_7days >= 7) badges.push('streak_7');
+      if (gs.some(g => (g.current_value / g.target_value) >= 1)) badges.push('goal_reached');
+      setEarnedBadges(badges);
+
     } catch (e) {
       console.error(e);
     } finally {
@@ -108,12 +116,25 @@ export default function Dashboard() {
     { calories: 0, protein_g: 0, fat_g: 0, carb_g: 0 }
   );
 
+  const handleShare = async () => {
+    const text = `今日の筋トレ記録🔥\n摂取: ${totals.calories}kcal\nストリーク: ${streak}日連続！\n#IRON #筋トレPWA`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'IRON 記録', text });
+      } catch (e) {
+        console.log('Share cancelled');
+      }
+    } else {
+      await navigator.clipboard.writeText(text);
+      showToast('クリップボードにコピーしました！');
+    }
+  };
+
   const handleWeightSave = async () => {
     const w = parseFloat(weightInput);
     if (!w || w < 30 || w > 200) return showToast('正しい体重を入力してください', 'error');
     setSaving(true);
     haptic('light');
-    // Optimistic: 即モーダルを閉じる
     setShowWeightModal(false);
     setWeightInput('');
     try {
@@ -132,33 +153,40 @@ export default function Dashboard() {
 
   return (
     <div className="page fade-in">
-      {/* オフラインバナー */}
       <div className={`offline-banner ${isOnline ? 'hidden' : ''}`}>
         <WifiOff size={11} style={{ display: 'inline', marginRight: 4 }} />
         オフライン中 — 記録はオンライン復帰時に自動同期されます
       </div>
 
       {/* ヘッダー */}
-      <div className="page-header" style={{ marginTop: isOnline ? 0 : 28 }}>
+      <div className="page-header" style={{ marginTop: isOnline ? 0 : 28, marginBottom: 16 }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 2 }}>
             {new Date().toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', weekday: 'short' })}
-            {!isOnline && (
-              <span style={{ color: 'var(--yellow)', fontWeight: 700, marginLeft: 8 }}>
-                <span className="pending-dot" style={{ marginRight: 4 }} />
-                オフライン
-              </span>
-            )}
           </div>
           <h1 className="page-title">ダッシュボード</h1>
         </div>
-        <button
-          className="btn btn-secondary"
-          style={{ width: 44, minHeight: 44, padding: 0, borderRadius: 12 }}
-          onClick={() => { haptic('light'); setShowWeightModal(true); }}
-        >
-          <Scale size={18} />
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-secondary" style={{ width: 44, minHeight: 44, padding: 0, borderRadius: 12 }} onClick={handleShare}>
+            <Share2 size={18} />
+          </button>
+          <button className="btn btn-secondary" style={{ width: 44, minHeight: 44, padding: 0, borderRadius: 12 }} onClick={() => setShowWeightModal(true)}>
+            <Scale size={18} />
+          </button>
+        </div>
+      </div>
+
+      {/* ストリーク & バッジ */}
+      <div className="card" style={{ display: 'flex', gap: 20, alignItems: 'center', padding: '16px 20px' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ color: 'var(--accent)', marginBottom: 2 }}><Flame size={24} fill="var(--accent)" /></div>
+          <div style={{ fontSize: 22, fontWeight: 900 }}>{streak}</div>
+          <div style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Streak</div>
+        </div>
+        <div style={{ flex: 1, borderLeft: '1px solid var(--border)', paddingLeft: 16 }}>
+          <div className="card-title" style={{ marginBottom: 8, fontSize: 10 }}>獲得バッジ</div>
+          <BadgesGroup earnedBadges={earnedBadges} />
+        </div>
       </div>
 
       {/* PFCバー */}
@@ -194,59 +222,17 @@ export default function Dashboard() {
 
       {/* アクションボタン */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-        <button
-          ref={mealRipple.ref}
-          className="btn btn-primary"
-          onClick={(e) => { mealRipple.onClick(e); haptic('light'); navigate('/meal'); }}
-        >
+        <button ref={mealRipple.ref} className="btn btn-primary" onClick={(e) => { mealRipple.onClick(e); haptic('light'); navigate('/meal'); }}>
           <Utensils size={20} /><span>食事記録</span>
         </button>
-        <button
-          ref={workoutRipple.ref}
-          className="btn btn-secondary"
-          onClick={(e) => { workoutRipple.onClick(e); haptic('light'); navigate('/workout'); }}
-        >
+        <button ref={workoutRipple.ref} className="btn btn-secondary" onClick={(e) => { workoutRipple.onClick(e); haptic('light'); navigate('/workout'); }}>
           <Dumbbell size={20} /><span>トレーニング</span>
         </button>
       </div>
-      <button
-        className="btn btn-secondary"
-        style={{ marginBottom: 16 }}
-        onClick={() => { haptic('light'); navigate('/analysis'); }}
-      >
-        <BarChart2 size={20} /><span>AIアドバイスを見る</span>
-      </button>
 
-      {/* 今日の食事ログ */}
-      {mealsToday.length > 0 && (
-        <div className="card">
-          <div className="card-title">今日の食事ログ 🍽</div>
-          {mealsToday.map((m, i) => (
-            <div
-              key={i}
-              style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '10px 0',
-                borderBottom: i < mealsToday.length - 1 ? '1px solid var(--border)' : 'none',
-                opacity: m._pending ? 0.6 : 1,
-              }}
-            >
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontWeight: 600, fontSize: 14 }}>{m.meal_label || '食事'}</span>
-                  {m._pending && <span className="pending-dot" />}
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                  P: {m.protein_g}g / F: {m.fat_g}g / C: {m.carb_g}g
-                </div>
-              </div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--accent)' }}>
-                {m.calories}kcal
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <button className="btn btn-secondary" style={{ marginBottom: 16 }} onClick={() => navigate('/analysis')}>
+        <BarChart2 size={20} /><span>AIトレーナー IRON</span>
+      </button>
 
       {/* 体重記録モーダル */}
       {showWeightModal && (
@@ -256,17 +242,7 @@ export default function Dashboard() {
             <div className="modal-title">体重を記録</div>
             <div className="input-group">
               <label className="input-label">体重 (kg)</label>
-              <input
-                type="number"
-                step="0.1"
-                placeholder="65.0"
-                className="input-field"
-                value={weightInput}
-                onChange={(e) => setWeightInput(e.target.value)}
-                style={{ fontSize: 28, textAlign: 'center', fontWeight: 800 }}
-                autoFocus
-                onKeyDown={(e) => e.key === 'Enter' && handleWeightSave()}
-              />
+              <input type="number" step="0.1" placeholder="65.0" className="input-field" value={weightInput} onChange={(e) => setWeightInput(e.target.value)} style={{ fontSize: 28, textAlign: 'center', fontWeight: 800 }} autoFocus />
             </div>
             <button className="btn btn-primary" onClick={handleWeightSave} disabled={saving}>
               {saving ? '保存中...' : '✅ 保存'}
