@@ -1,19 +1,21 @@
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Utensils, Dumbbell, BarChart2, Settings } from 'lucide-react';
+import { Home, Utensils, Dumbbell, BarChart2, Settings, TrendingUp } from 'lucide-react';
 import Dashboard from './pages/Dashboard.jsx';
 import MealPage from './pages/MealPage.jsx';
 import WorkoutPage from './pages/WorkoutPage.jsx';
 import AnalysisPage from './pages/AnalysisPage.jsx';
+import StatsPage from './pages/StatsPage.jsx';
 import ImportPage from './pages/ImportPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import { ToastProvider } from './components/Toast.jsx';
 
 const NAV_ITEMS = [
-  { path: '/',          label: 'ホーム',    icon: Home },
-  { path: '/meal',      label: '食事',      icon: Utensils },
-  { path: '/workout',   label: 'トレ',      icon: Dumbbell },
-  { path: '/analysis',  label: '分析',      icon: BarChart2 },
-  { path: '/settings',  label: '設定',      icon: Settings },
+  { path: '/',         label: 'ホーム', icon: Home },
+  { path: '/meal',     label: '食事',   icon: Utensils },
+  { path: '/workout',  label: 'トレ',   icon: Dumbbell },
+  { path: '/stats',    label: 'Stats',  icon: TrendingUp },
+  { path: '/analysis', label: 'AI',     icon: BarChart2 },
+  { path: '/settings', label: '設定',   icon: Settings },
 ];
 
 function NavBar() {
@@ -48,6 +50,7 @@ export default function App() {
         <Route path="/meal"     element={<MealPage />} />
         <Route path="/workout"  element={<WorkoutPage />} />
         <Route path="/analysis" element={<AnalysisPage />} />
+        <Route path="/stats"    element={<StatsPage />} />
         <Route path="/import"   element={<ImportPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Routes>

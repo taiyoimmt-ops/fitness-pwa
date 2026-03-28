@@ -128,6 +128,12 @@ export const api = {
   /** 7日間サマリー取得 */
   getSummary7days: () => gasGet('getSummary7days'),
 
+  /** 体重履歴取得（Stats用） */
+  getBodyWeightHistory: (days = 30) => gasGet('getBodyWeightHistory', { days }),
+
+  /** ワークアウト履歴取得（Stats・BIG3グラフ用） */
+  getWorkoutHistory: (exercise, limit = 20) => gasGet('getWorkoutHistory', { exercise, limit }),
+
   /** 目標進捗更新 */
   updateGoalProgress: (goal_id, current_value) =>
     gasPost('updateGoalProgress', { goal_id, current_value }),

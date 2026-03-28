@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Save, TrendingUp, Bell, BellOff } from 'lucide-react';
 import { api } from '../api/gas.js';
 import { GOAL_LABELS, GOAL_UNITS } from '../constants.js';
 import { useToast } from '../components/Toast.jsx';
@@ -10,8 +10,9 @@ export default function SettingsPage() {
   const showToast = useToast();
   const [goals, setGoals] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [updates, setUpdates] = useState({}); // { goal_id: new_current_value }
+  const [updates, setUpdates] = useState({});
   const [saving, setSaving] = useState(false);
+  const [notificationStatus, setNotificationStatus] = useState(Notification.permission);
 
   useEffect(() => {
     api.getGoals()
@@ -28,8 +29,6 @@ export default function SettingsPage() {
         entries.map(([goal_id, val]) => api.updateGoalProgress(goal_id, Number(val)))
       );
       showToast('✅ 目標を更新しました！');
-      // KPI更新チェック
-      // リロード
       const gs = await api.getGoals();
       setGoals(gs);
       setUpdates({});
@@ -37,6 +36,22 @@ export default function SettingsPage() {
       showToast('⚠️ ' + e.message, 'error');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const requestNotificationPermission = async () => {
+    try {
+      const permission = await Notification.requestPermission();
+      setNotificationStatus(permission);
+      if (permission === 'granted') {
+        showToast('✅ 通知が許可されました');
+        // デスト用通知
+        new Notification('IRON', { body: '通知の準備は整った。ジムへ行け。' });
+      } else {
+        showToast('❌ 通知が拒否されました', 'error');
+      }
+    } catch (e) {
+      showToast('⚠️ ブラウザが通知に対応していません', 'error');
     }
   };
 
@@ -53,11 +68,39 @@ export default function SettingsPage() {
         <h1 className="page-title">設定・目標管理</h1>
       </div>
 
+      {/* 通知設定 */}
+      <div className="card">
+        <div className="card-title">プッシュ通知 🔔</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>ジムのリマインダー</div>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+              毎日 19:00 に通知を受け取る
+            </div>
+          </div>
+          {notificationStatus === 'granted' ? (
+            <div style={{ color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700 }}>
+              <Bell size={16} /> 有効
+            </div>
+          ) : (
+            <button className="btn btn-secondary" style={{ width: 'auto', minHeight: 40, padding: '8px 16px', fontSize: 13 }}
+              onClick={requestNotificationPermission}>
+              許可する
+            </button>
+          )}
+        </div>
+        {notificationStatus === 'denied' && (
+          <p style={{ fontSize: 11, color: 'var(--red)', marginTop: 8 }}>
+            ブラウザの設定から通知を許可してください
+          </p>
+        )}
+      </div>
+
       {/* 目標進捗の更新 */}
       <div className="card">
         <div className="card-title">現在値を更新 📈</div>
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>
-          トレーニングや体重計測後に最新の数値を入力してください。月間KPIが自動再計算されます。
+          トレーニングや体重計測後に最新の数値を入力してください。
         </p>
 
         {goals.map((g) => (
@@ -67,7 +110,7 @@ export default function SettingsPage() {
                 {GOAL_LABELS[g.goal_id] || g.goal_id}
               </label>
               <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                目標: {g.target_value}{GOAL_UNITS[g.goal_id] || ''} / 締切: {g.deadline}
+                目標: {g.target_value}{GOAL_UNITS[g.goal_id] || ''}
               </span>
             </div>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -80,21 +123,8 @@ export default function SettingsPage() {
                 onChange={(e) => setUpdates({ ...updates, [g.goal_id]: e.target.value })}
                 style={{ flex: 1 }}
               />
-              <span style={{ fontSize: 14, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+              <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
                 {GOAL_UNITS[g.goal_id] || ''}
-              </span>
-            </div>
-            {/* KPI表示 */}
-            <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: 12 }}>
-              <span style={{ color: 'var(--text-muted)' }}>
-                現在: <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
-                  {g.current_value}{GOAL_UNITS[g.goal_id] || ''}
-                </span>
-              </span>
-              <span style={{ color: 'var(--text-muted)' }}>
-                月KPI: <span style={{ color: 'var(--accent)', fontWeight: 600 }}>
-                  +{g.monthly_kpi}{GOAL_UNITS[g.goal_id] || ''}/月
-                </span>
               </span>
             </div>
           </div>
@@ -117,14 +147,8 @@ export default function SettingsPage() {
                 <span style={{ fontWeight: 600 }}>{GOAL_LABELS[g.goal_id] || g.goal_id}</span>
                 <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{pct}%</span>
               </div>
-              <div style={{ display: 'flex', gap: 12, fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}>
-                <span>{g.current_value} → {g.target_value}{GOAL_UNITS[g.goal_id]}</span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <TrendingUp size={12} />+{g.monthly_kpi}/月
-                </span>
-              </div>
               <div className="progress-track">
-                <div className={`progress-fill ${pct >= 100 ? 'green' : 'green'}`} style={{ width: `${Math.min(pct, 100)}%`, background: 'var(--accent)' }} />
+                <div className="progress-fill green" style={{ width: `${Math.min(pct, 100)}%` }} />
               </div>
             </div>
           );
@@ -133,25 +157,9 @@ export default function SettingsPage() {
 
       <div className="card">
         <div className="card-title">便利な機能 ⚡️</div>
-        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>
-          「筋トレメモ」アプリのスクリーンショットから記録を移行できます。
-        </p>
         <button className="btn btn-secondary" onClick={() => navigate('/import')}>
           📤 スクショからインポート
         </button>
-      </div>
-
-      {/* GAS URLなど（デバッグ情報） */}
-      <div className="card">
-        <div className="card-title">接続情報</div>
-        <div style={{ fontSize: 12, color: 'var(--text-muted)', wordBreak: 'break-all' }}>
-          <div>GAS URL: {import.meta.env.VITE_GAS_URL?.slice(0, 60)}...</div>
-          <div style={{ marginTop: 8 }}>
-            Gemini API: {import.meta.env.VITE_GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY'
-              ? <span style={{ color: 'var(--red)' }}>未設定</span>
-              : <span style={{ color: 'var(--accent)' }}>設定済み</span>}
-          </div>
-        </div>
       </div>
     </div>
   );
