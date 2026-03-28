@@ -4,16 +4,15 @@ import { Camera, CheckCircle, Edit3, ArrowLeft, AlertCircle, Scan } from 'lucide
 import { api } from '../api/gas.js';
 import { useToast } from '../components/Toast.jsx';
 import { haptics } from '../utils/haptics.js';
+import HapticInput from '../components/HapticInput.jsx';
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 const PROMPT = `画像から食事または栄養成分表示（ラベル）を分析し、JSONのみで回答せよ。
-
 【重要】
 1. 画像内に「栄養成分表示」がある場合、その数値を最優先で抽出せよ。
 2. 「100gあたり」と表示されている場合は、商品の内容量から合計値を計算せよ。
 3. 食事本体の画像のみの場合は、これまでの学習データから平均的なPFCを予測せよ。
-
 【出力形式】
 {
   "meal_label": "具体的な商品名または料理名",
@@ -129,15 +128,11 @@ export default function MealPage() {
         </div>
       )}
 
-      {/* 撮影フェーズ */}
       {phase === 'idle' && (
         <div className="card" style={{ textAlign: 'center', padding: 40, border: '2px dashed var(--border)' }}>
           <div style={{ fontSize: 60, marginBottom: 16 }}>📸</div>
           <p style={{ color: 'var(--text-primary)', fontWeight: 700, marginBottom: 8, fontSize: 16 }}>
-            パッケージの「栄養成分表示」をスキャン
-          </p>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: 24, fontSize: 13 }}>
-            カメラを成分表に向けるだけで、PFCを<br />正確に読み取り自動計算します。
+            パッケージをスキャン
           </p>
           <input
             ref={fileRef}
@@ -154,7 +149,6 @@ export default function MealPage() {
         </div>
       )}
 
-      {/* 解析中 */}
       {phase === 'analyzing' && (
         <>
           {imagePreview && (
@@ -165,12 +159,11 @@ export default function MealPage() {
           )}
           <div className="card" style={{ textAlign: 'center', padding: 40 }}>
             <div className="spinner" style={{ margin: '0 auto 16px' }} />
-            <p style={{ color: 'var(--accent)', fontWeight: 800, fontSize: 15 }}>スキャン中...</p>
+            <p style={{ color: 'var(--accent)', fontWeight: 800, fontSize: 15 }}>測定中...</p>
           </div>
         </>
       )}
 
-      {/* 解析結果 */}
       {(phase === 'result' || phase === 'saving') && result && (
         <>
           {imagePreview && (
@@ -181,19 +174,15 @@ export default function MealPage() {
 
           <div className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <div className="card-title" style={{ marginBottom: 0 }}>
-                {result.is_label ? 'ラベルスキャン成功' : '解析結果'}
-              </div>
-              <span className={`badge ${result.confidence?.includes('high') ? 'badge-green' : 'badge-grey'}`}>
+              <div className="card-title" style={{ marginBottom: 0 }}>測定完了</div>
+              <span className={`badge ${result.is_label ? 'badge-green' : 'badge-grey'}`}>
                 {result.is_label ? 'OCR' : 'AI予測'}
               </span>
             </div>
 
             {!editing ? (
               <>
-                <div style={{ fontSize: 22, fontWeight: 900, marginBottom: 20, color: 'var(--accent)' }}>
-                  {form.meal_label}
-                </div>
+                <div style={{ fontSize: 22, fontWeight: 900, marginBottom: 20, color: 'var(--accent)' }}>{form.meal_label}</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
                   {[
                     { label: 'カロリー', value: form.calories, unit: 'kcal' },
@@ -201,12 +190,7 @@ export default function MealPage() {
                     { label: '脂質', value: form.fat_g, unit: 'g' },
                     { label: '炭水化物', value: form.carb_g, unit: 'g' },
                   ].map((item) => (
-                    <div key={item.label} style={{ 
-                      background: 'var(--bg-3)', 
-                      borderRadius: 14, 
-                      padding: '16px',
-                      border: result.is_label ? '1px solid var(--accent-dim)' : '1px solid var(--border)'
-                    }}>
+                    <div key={item.label} style={{ background: 'var(--bg-3)', borderRadius: 14, padding: '16px' }}>
                       <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4 }}>{item.label}</div>
                       <div style={{ fontSize: 24, fontWeight: 900, color: 'var(--text-primary)' }}>
                         {item.value}<span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 4 }}>{item.unit}</span>
@@ -216,49 +200,28 @@ export default function MealPage() {
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <button className="btn btn-secondary" onClick={() => { haptics.light(); setEditing(true); }}>修正</button>
-                  <button className="btn btn-primary" onClick={handleSave} disabled={phase === 'saving'}>
-                    確定して保存
-                  </button>
+                  <button className="btn btn-primary" onClick={handleSave} disabled={phase === 'saving'}>確定して保存</button>
                 </div>
               </>
             ) : (
-              <>
+              <div className="fade-in">
                 <div className="input-group">
                   <label className="input-label">食事名</label>
                   <input className="input-field" value={form.meal_label || ''} onChange={(e) => setForm({ ...form, meal_label: e.target.value })} />
                 </div>
-                <div className="num-input-row">
-                  <div className="input-group">
-                    <label className="input-label">kcal</label>
-                    <input className="input-field" type="number" value={form.calories || ''} onChange={(e) => setForm({ ...form, calories: e.target.value })} />
-                  </div>
-                  <div className="input-group">
-                    <label className="input-label">P (g)</label>
-                    <input className="input-field" type="number" value={form.protein_g || ''} onChange={(e) => setForm({ ...form, protein_g: e.target.value })} />
-                  </div>
-                </div>
-                <div className="num-input-row">
-                  <div className="input-group">
-                    <label className="input-label">F (g)</label>
-                    <input className="input-field" type="number" value={form.fat_g || ''} onChange={(e) => setForm({ ...form, fat_g: e.target.value })} />
-                  </div>
-                  <div className="input-group">
-                    <label className="input-label">C (g)</label>
-                    <input className="input-field" type="number" value={form.carb_g || ''} onChange={(e) => setForm({ ...form, carb_g: e.target.value })} />
-                  </div>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                
+                <HapticInput label="カロリー" value={form.calories} unit="kcal" onChange={(v) => setForm({...form, calories: v})} step={10} />
+                <HapticInput label="タンパク質" value={form.protein_g} unit="g" onChange={(v) => setForm({...form, protein_g: v})} step={0.5} />
+                <HapticInput label="脂質" value={form.fat_g} unit="g" onChange={(v) => setForm({...form, fat_g: v})} step={0.5} />
+                <HapticInput label="炭水化物" value={form.carb_g} unit="g" onChange={(v) => setForm({...form, carb_g: v})} step={1} />
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 24 }}>
                   <button className="btn btn-secondary" onClick={() => { haptics.light(); setEditing(false); }}>キャンセル</button>
-                  <button className="btn btn-primary" onClick={() => { haptics.success(); setEditing(false); }}>OK</button>
+                  <button className="btn btn-primary" onClick={() => { haptics.success(); setEditing(false); }}>確定</button>
                 </div>
-              </>
+              </div>
             )}
           </div>
-
-          <button className="btn btn-ghost" style={{ width: '100%', color: 'var(--text-muted)', marginTop: 8 }}
-            onClick={() => { haptics.medium(); setPhase('idle'); setResult(null); setImagePreview(null); setEditing(false); }}>
-            撮り直す
-          </button>
         </>
       )}
     </div>

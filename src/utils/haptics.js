@@ -4,7 +4,14 @@
  */
 
 export const haptics = {
-  /** 軽いタップ感 (数値入力、項目切り替え) */
+  /** 極めて軽いドット感 (Picker選択、数値増減の1ステップ) */
+  selection: () => {
+    // iPhoneの selectionChanged は約 1-2ms ですが
+    // Web APIの最小値に準拠
+    if (navigator.vibrate) navigator.vibrate(5);
+  },
+
+  /** 軽いタップ感 (項目切り替え) */
   light: () => {
     if (navigator.vibrate) navigator.vibrate(10);
   },
