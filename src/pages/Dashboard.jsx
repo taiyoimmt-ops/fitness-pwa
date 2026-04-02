@@ -85,8 +85,18 @@ export default function Dashboard() {
       <PullToRefresh onRefresh={async () => { haptics.medium(); await load(); }}>
         {/* 主要達成リング */}
         <div className="card" style={{ display: 'flex', justifyContent: 'space-around', padding: '32px 20px' }}>
-          <RingGauge label="CALORIES" current={totals.cal} target={DAILY_TARGETS.calories} unit="kcal" color="var(--accent)" />
-          <RingGauge label="PROTEIN" current={totals.pro} target={DAILY_TARGETS.protein} unit="g" color="var(--accent)" />
+          <RingGauge 
+            label="CALORIES" 
+            percent={DAILY_TARGETS.calories > 0 ? (totals.cal / DAILY_TARGETS.calories) * 100 : 0} 
+            sublabel={`${Math.round(totals.cal)} / ${DAILY_TARGETS.calories} kcal`} 
+            color="var(--accent)" 
+          />
+          <RingGauge 
+            label="PROTEIN" 
+            percent={DAILY_TARGETS.protein_g > 0 ? (totals.pro / DAILY_TARGETS.protein_g) * 100 : 0} 
+            sublabel={`${Math.round(totals.pro)} / ${DAILY_TARGETS.protein_g} g`} 
+            color="var(--accent)" 
+          />
         </div>
 
         {/* PFC 詳細 */}

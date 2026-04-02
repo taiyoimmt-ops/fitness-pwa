@@ -1,5 +1,5 @@
 // SVGリングゲージコンポーネント: 100%達成時の祝祭エフェクト付き
-export default function RingGauge({ percent, size = 80, label, sublabel, color = '#39FF14', celebrate = false }) {
+export default function RingGauge({ percent = 0, size = 80, label, sublabel, color = '#39FF14', celebrate = false }) {
   const r = (size - 10) / 2;
   const circumference = 2 * Math.PI * r;
   const clamped = Math.min(percent, 100);
@@ -69,7 +69,7 @@ export default function RingGauge({ percent, size = 80, label, sublabel, color =
           color: isGoalReached ? 'var(--accent)' : 'var(--text-primary)',
           textShadow: isGoalReached ? '0 0 10px rgba(57,255,20,0.5)' : 'none'
         }}>
-          {Math.round(percent)}%
+          {Math.round(percent || 0)}%
         </span>
       </div>
 
