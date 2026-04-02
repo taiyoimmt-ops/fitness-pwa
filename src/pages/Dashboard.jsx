@@ -12,16 +12,21 @@ import { haptics } from '../utils/haptics.js';
 
 function PFCBar({ label, current, target, unit }) {
   const pct = target > 0 ? (current / target) * 100 : 0;
-  const cls = pct >= 100 ? 'red' : pct >= 70 ? 'green' : 'grey';
-  const remaining = Math.max(Math.round(target - current), 0);
+  const color = pct >= 100 ? 'var(--error)' : 'var(--accent)';
   return (
-    <div className="progress-bar-wrap">
-      <div className="progress-label">
-        <span style={{ fontSize: 11, fontWeight: 700 }}>{label}</span>
-        <span style={{ fontSize: 11 }}>{Math.round(current)}{unit} / {target}{unit}</span>
+    <div className="progress-bar-wrap" style={{ marginBottom: 16 }}>
+      <div className="progress-label" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{label}</span>
+        <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{Math.round(current)}{unit} / {target}{unit}</span>
       </div>
-      <div className="progress-track" style={{ height: 6 }}>
-        <div className={`progress-fill ${cls}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+      <div className="progress-track" style={{ height: 8, background: 'var(--bg-tertiary)', borderRadius: 4, overflow: 'hidden' }}>
+        <div className="progress-fill" style={{ 
+          width: `${Math.min(pct, 100)}%`, 
+          height: '100%', 
+          background: color, 
+          borderRadius: 4,
+          transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)' 
+        }} />
       </div>
     </div>
   );
@@ -65,37 +70,36 @@ export default function Dashboard() {
     <div className="page fade-in">
       {!online && <div className="offline-banner">OFFLINE Mode - 変更は復帰後に同期されます</div>}
 
-      <div className="page-header" style={{ justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-3)', padding: '6px 12px', borderRadius: 16 }}>
-            <span style={{ color: 'var(--accent)', fontWeight: 900, fontSize: 13, marginRight: data.stats.streak > 0 ? 8 : 0 }}>IRON</span>
+      <div className="page-header" style={{ justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+            <span style={{ color: 'var(--accent)', fontWeight: 800, fontSize: 12, letterSpacing: '0.05em' }}>IRON</span>
             {data.stats.streak > 0 && (
-              <span className="streak-badge pulse" style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(255, 69, 0, 0.1)', color: '#FF4500', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 'bold' }}>
-                🔥 {data.stats.streak} Days
+              <span className="streak-badge" style={{ background: 'rgba(255, 149, 0, 0.1)', color: 'var(--warning)', padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 700 }}>
+                🔥 {data.stats.streak} DAYS
               </span>
             )}
           </div>
-          <h1 className="page-title">Dash</h1>
+          <h1 className="page-title" style={{ margin: 0 }}>Dashboard</h1>
         </div>
-        <button className="btn btn-ghost" onClick={() => { haptics.light(); navigate('/calendar'); }}>
-          <Calendar size={22} />
+        <button className="btn btn-ghost" style={{ padding: 8 }} onClick={() => { haptics.light(); navigate('/calendar'); }}>
+          <Calendar size={24} strokeWidth={2.2} />
         </button>
       </div>
 
       <PullToRefresh onRefresh={async () => { haptics.medium(); await load(); }}>
         {/* 主要達成リング */}
-        <div className="card" style={{ display: 'flex', justifyContent: 'space-around', padding: '32px 20px' }}>
+        <div className="card" style={{ display: 'flex', justifyContent: 'space-around', padding: '32px 10px' }}>
           <RingGauge 
-            label="CALORIES" 
+            label="Calories" 
             percent={DAILY_TARGETS.calories > 0 ? (totals.cal / DAILY_TARGETS.calories) * 100 : 0} 
             sublabel={`${Math.round(totals.cal)} / ${DAILY_TARGETS.calories} kcal`} 
-            color="var(--accent)" 
           />
+          <div style={{ width: 1, background: 'var(--border)', height: 60, alignSelf: 'center' }} />
           <RingGauge 
-            label="PROTEIN" 
+            label="Protein" 
             percent={DAILY_TARGETS.protein_g > 0 ? (totals.pro / DAILY_TARGETS.protein_g) * 100 : 0} 
             sublabel={`${Math.round(totals.pro)} / ${DAILY_TARGETS.protein_g} g`} 
-            color="var(--accent)" 
           />
         </div>
 
@@ -112,11 +116,11 @@ export default function Dashboard() {
             <div className="card-title" style={{ marginBottom: 0 }}>My Benchmarks</div>
             <button className="btn btn-ghost" style={{ padding: 0 }} onClick={() => navigate('/workout')}><Plus size={16}/></button>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
             {data.goals.map(g => (
-              <div key={g.goal_id} style={{ background: 'var(--bg-3)', padding: '12px 10px', borderRadius: 12, textAlign: 'center' }}>
-                <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4, fontWeight: 700 }}>{GOAL_LABELS[g.goal_id] || g.goal_id}</div>
-                <div style={{ fontSize: 15, fontWeight: 900, color: 'var(--accent)' }}>{g.current_value}<span style={{ fontSize: 9, marginLeft: 2 }}>{GOAL_UNITS[g.goal_id]}</span></div>
+              <div key={g.goal_id} style={{ background: 'var(--bg-secondary)', padding: '16px 10px', borderRadius: 16, textAlign: 'center', border: '1px solid var(--border)' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6, fontWeight: 600 }}>{GOAL_LABELS[g.goal_id] || g.goal_id}</div>
+                <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>{g.current_value}<span style={{ fontSize: 10, marginLeft: 2, color: 'var(--text-secondary)' }}>{GOAL_UNITS[g.goal_id]}</span></div>
               </div>
             ))}
           </div>

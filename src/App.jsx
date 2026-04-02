@@ -9,6 +9,7 @@ import ImportPage from './pages/ImportPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import CalendarPage from './pages/CalendarPage.jsx';
 import { ToastProvider } from './components/Toast.jsx';
+import { haptics } from './utils/haptics.js';
 
 const NAV_ITEMS = [
   { path: '/',         label: 'Dash', icon: Home },
@@ -18,6 +19,7 @@ const NAV_ITEMS = [
   { path: '/analysis', label: 'AI',     icon: BarChart2 },
   { path: '/settings', label: '設定',   icon: Settings },
 ];
+
 
 function NavBar() {
   const location = useLocation();
@@ -31,11 +33,11 @@ function NavBar() {
           <button
             key={path}
             className={`nav-item ${active ? 'active' : ''}`}
-            onClick={() => navigate(path)}
+            onClick={() => { haptics.light(); navigate(path); }}
             aria-label={label}
           >
-            <Icon size={22} strokeWidth={active ? 2.5 : 1.8} />
-            <span className="nav-item-label">{label}</span>
+            <Icon size={24} strokeWidth={active ? 2.4 : 1.8} />
+            <span className="nav-item-label" style={{ fontWeight: active ? 600 : 500 }}>{label}</span>
           </button>
         );
       })}

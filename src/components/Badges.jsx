@@ -10,25 +10,22 @@ export const ALL_BADGES = [
 export function BadgeItem({ badge, earned = false }) {
   return (
     <div style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-      opacity: earned ? 1 : 0.25, filter: earned ? 'none' : 'grayscale(1)',
-      transition: 'all 0.3s ease', width: 72, flexShrink: 0
+      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+      opacity: earned ? 1 : 0.35, filter: earned ? 'none' : 'grayscale(0.8)',
+      transition: 'all 0.4s cubic-bezier(0.23, 1, 0.32, 1)', width: 72, flexShrink: 0
     }}>
       <div style={{
-        width: 52, height: 52, borderRadius: '50%',
-        background: earned ? 'var(--bg-2)' : 'rgba(255,255,255,0.02)',
-        border: earned ? `2px solid ${badge.color}` : '1px dashed var(--border)',
+        width: 56, height: 56, borderRadius: 16,
+        background: earned ? badge.color + '20' : 'var(--bg-tertiary)',
+        border: earned ? `1px solid ${badge.color}40` : '1px dashed var(--border)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: earned ? `0 4px 15px ${badge.color}44` : 'none',
-        fontSize: '24px'
+        boxShadow: earned ? `0 4px 12px ${badge.color}30` : 'none',
+        fontSize: '26px'
       }}>
         {badge.icon}
       </div>
-      <div style={{ fontSize: 10, fontWeight: 700, textAlign: 'center', color: earned ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+      <div style={{ fontSize: 11, fontWeight: 600, textAlign: 'center', color: earned ? 'var(--text-primary)' : 'var(--text-muted)', letterSpacing: '-0.01em' }}>
         {badge.name}
-      </div>
-      <div style={{ fontSize: 8, color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.1 }}>
-        {badge.desc}
       </div>
     </div>
   );
