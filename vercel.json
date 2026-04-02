@@ -1,5 +1,13 @@
 {
+  "cleanUrls": true,
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/(assets|sw.js|manifest.json|favicon.ico|apple-touch-icon.png|splash.png|icon-192.png|icon-512.png)(.*)",
+      "destination": "/$1$2"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }
